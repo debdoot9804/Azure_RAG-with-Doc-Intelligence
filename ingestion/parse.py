@@ -2,6 +2,8 @@ from azure.ai.formrecognizer import DocumentAnalysisClient
 from azure.core.credentials import AzureKeyCredential
 import os
 from backend.logger import setup_logger
+from dotenv import load_dotenv
+load_dotenv()
 
 logger = setup_logger()
 def parse_document(blob_url):

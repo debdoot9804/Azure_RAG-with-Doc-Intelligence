@@ -1,6 +1,8 @@
 from azure.search.documents import SearchClient
 from azure.core.credentials import AzureKeyCredential
 import os
+from dotenv import load_dotenv
+load_dotenv()
 from backend.logger import setup_logger
 
 logger = setup_logger()

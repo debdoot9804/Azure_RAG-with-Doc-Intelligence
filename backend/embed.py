@@ -1,4 +1,6 @@
 import os
+from dotenv import load_dotenv
+load_dotenv()
 from langchain.embeddings import OpenAIEmbeddings
 from azure.search.documents.indexes import SearchIndexClient
 from azure.search.documents.indexes.models import (
@@ -12,7 +14,7 @@ from vectordb import get_azure_ai_search
 from backend.logger import setup_logger
 
 logger = setup_logger()
-VECTOR_DIMENSIONS = 1536  # adjust if using another model like text-embedding-3-large
+VECTOR_DIMENSIONS = 1536  # embedding dimesnion size for text-embedding-3-small
 
 # Get Embedding Model
 def get_embed_model():
