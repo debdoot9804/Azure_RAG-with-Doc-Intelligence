@@ -19,11 +19,11 @@ def search_query(user_query):
 
         top_chunks = "\n\n".join([doc["content"] for doc in results])
         llm = AzureChatOpenAI(
-            azure_deployment=os.getenv("AZURE_OPENAI_DEPLOYMENT"),
-            openai_api_key=os.getenv("AZURE_OPENAI_KEY"),
-            openai_api_base=os.getenv("AZURE_OPENAI_ENDPOINT"),
-            openai_api_version=os.getenv("AZURE_OPENAI_API_VERSION")
-        )
+    api_key=os.getenv("AZURE_OPENAI_KEY"),
+    azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
+    deployment_name=os.getenv("AZURE_OPENAI_DEPLOYMENT"),  
+    api_version=os.getenv("AZURE_OPENAI_API_VERSION"),      
+)
 
         prompt = f"You are a document assistant, provide to the point answer to the user with simple,clear words for better understanding
         Answer based on the following context:\n\n {top_chunks} \n\nQuestion: {user_query}"

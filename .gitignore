@@ -18,3 +18,5 @@ configs/settings.env
 # System
 .DS_Store
 temp.pdf
+
+.venv

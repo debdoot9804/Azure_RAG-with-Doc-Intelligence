@@ -1,66 +1,106 @@
 import os
 from dotenv import load_dotenv
 load_dotenv()
-from langchain.embeddings import OpenAIEmbeddings
+from langchain_openai import OpenAIEmbeddings
+from openai import AzureOpenAI 
 from azure.search.documents.indexes import SearchIndexClient
 from azure.search.documents.indexes.models import (
-    SearchIndex, SimpleField, VectorSearch,
-    VectorSearchAlgorithmConfiguration, VectorField
+    SearchIndex,
+    SearchFieldDataType,
+    SearchField,
+    VectorSearch,
+    VectorSearchAlgorithmConfiguration,
+    SearchableField
 )
 from azure.search.documents import SearchClient
 from azure.core.credentials import AzureKeyCredential
-
-from vectordb import get_azure_ai_search
+import requests
+import json
+from backend.vectordb import get_azure_ai_search
 from backend.logger import setup_logger
 
 logger = setup_logger()
 VECTOR_DIMENSIONS = 1536  # embedding dimesnion size for text-embedding-3-small
 
 # Get Embedding Model
-def get_embed_model():
-    return OpenAIEmbeddings(
-        azure_deployment=os.getenv("AZURE_OPENAI_EMBEDDING_DEPLOYMENT"),
-        openai_api_key=os.getenv("AZURE_OPENAI_KEY"),
-        openai_api_base=os.getenv("AZURE_OPENAI_ENDPOINT"),
-        openai_api_version=os.getenv("AZURE_OPENAI_EMBEDDING_VERSION")
-    )
+
+# backend/embedder.py
+
+from langchain_openai import OpenAIEmbeddings
+import os
+from dotenv import load_dotenv
+from backend.embed_model import AzureEmbedder
+load_dotenv()
 
 # Create Azure Search Index (if it doesn't exist)
 def create_azure_ai_search_index():
-    endpoint = os.getenv("AZURE_SEARCH_ENDPOINT")
-    key = os.getenv("AZURE_SEARCH_KEY")
+    """Create an Azure AI Search index for storing embeddings."""
+
+    logger.info("Creating Azure AI Search index...")
+
+    search_endpoint = os.getenv("AZURE_SEARCH_ENDPOINT")
+    search_key = os.getenv("AZURE_SEARCH_KEY")
     index_name = os.getenv("AZURE_SEARCH_INDEX")
+    vector_dimensions = 1536  
 
-    index_client = SearchIndexClient(endpoint=endpoint, credential=AzureKeyCredential(key))
-    existing_indexes = [i.name for i in index_client.list_indexes()]
+    url = f"{search_endpoint}/indexes/{index_name}?api-version=2023-11-01"
 
-    if index_name in existing_indexes:
-        logger.info(f"Search index '{index_name}' already exists. Skipping creation.")
-        return
+    headers = {
+        "Content-Type": "application/json",
+        "api-key": search_key
+    }
 
-    fields = [
-        SimpleField(name="id", type="Edm.String", key=True),
-        SimpleField(name="content", type="Edm.String", searchable=True),
-        VectorField(name="content_vector", dimensions=VECTOR_DIMENSIONS, vector_search_configuration="vector-config")
-    ]
+    index_schema = {
+        "name": index_name,
+        "fields": [
+            {
+                "name": "id",
+                "type": "Edm.String",
+                "key": True,
+                "filterable": True,
+            },
+            {
+                "name": "content",
+                "type": "Edm.String",
+                "searchable": True
+            },
+            {
+                "name": "content_vector",
+                "type": "Collection(Edm.Single)",
+                "searchable": False,
+                "filterable": False,
+                "sortable": False,
+                "facetable": False,
+                "dimensions": vector_dimensions,
+                "vectorSearchConfiguration": "vector-config"
+            }
+        ],
+        "vectorSearch": {
+            "algorithmConfigurations": [
+                {
+                    "name": "vector-config",
+                    "kind": "hnsw",
+                    "hnswParameters": {
+                        "m": 4,
+                        "efConstruction": 400
+                    }
+                }
+            ]
+        }
+    }
 
-    vector_search = VectorSearch(
-        algorithm_configurations=[
-            VectorSearchAlgorithmConfiguration(
-                name="vector-config",
-                kind="hnsw",
-                hnsw_parameters={"m": 4, "efConstruction": 400, "efSearch": 500}
-            )
-        ]
-    )
-
-    index = SearchIndex(name=index_name, fields=fields, vector_search=vector_search)
-    index_client.create_index(index)
-    logger.info(f"Search index '{index_name}' created successfully.")
+    try:
+        response = requests.put(url, headers=headers, json=index_schema)
+        if response.status_code in [200, 201]:
+            logger.info(f" Index '{index_name}' created successfully via REST API.")
+        else:
+            logger.error(f" Failed to create index: {response.status_code} {response.text}")
+    except Exception as e:
+        logger.error(f"Exception during index creation: {e}")
 
 # Generate Embeddings from Chunks
 def generate_chunk_embeddings(chunks):
-    embed_model = get_embed_model()
+    embed_model = AzureEmbedder()
     logger.info("Generating embeddings for all text chunks...")
 
     docs = []
