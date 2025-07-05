@@ -96,4 +96,4 @@ def create_embeddings_index(chunks):
         logger.info("Embedding pipeline completed successfully.")
     except Exception as e:
         logger.error(f"Embedding/indexing pipeline failed: {e}")
-        raise
+        raise e
