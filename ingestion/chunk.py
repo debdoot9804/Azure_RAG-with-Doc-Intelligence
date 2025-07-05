@@ -13,3 +13,5 @@ def chunk_text(text):
         logger.error(f"Text chunking failed: {e}")
         raise e
     
+    
+    
