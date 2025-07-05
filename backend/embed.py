@@ -7,6 +7,8 @@ from azure.search.documents.indexes.models import (
 )
 from azure.search.documents import SearchClient
 from azure.core.credentials import AzureKeyCredential
+
+from vectordb import get_azure_ai_search
 from backend.logger import setup_logger
 
 logger = setup_logger()
@@ -77,9 +79,7 @@ def upload_documents_to_index(docs):
     endpoint = os.getenv("AZURE_SEARCH_ENDPOINT")
     key = os.getenv("AZURE_SEARCH_KEY")
 
-    search_client = SearchClient(endpoint=endpoint,
-                                 index_name=index_name,
-                                 credential=AzureKeyCredential(key))
+    search_client = get_azure_ai_search()   
 
     logger.info(f"Uploading {len(docs)} documents to Azure AI Search index '{index_name}'...")
     result = search_client.upload_documents(documents=docs)
