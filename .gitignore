@@ -1,1 +1,20 @@
+# Python
+__pycache__/
+*.py[cod]
+
+# Logs
+logs/
+*.log
+
+# Envs & Keys
 .env
+*.env
+configs/settings.env
+
+# IDE
+.vscode/
+.idea/
+
+# System
+.DS_Store
+temp.pdf
