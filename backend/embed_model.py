@@ -1,4 +1,4 @@
-# ✅ Custom embedder to replace langchain-openai
+
 from openai import AzureOpenAI
 
 import os
