@@ -1,34 +1,71 @@
 from backend.vectordb import get_azure_ai_search
-from langchain.chat_models import AzureChatOpenAI
+from openai import AzureOpenAI
 import os
+from azure.search.documents.models import VectorizedQuery
 from backend.logger import setup_logger
-from dotenv import load_dotenv
-load_dotenv()
+
 logger = setup_logger()
 
 def search_query(user_query):
     try:
-        client = get_azure_ai_search()
-        results = client.search(search_text=user_query,
-                                vectors=[{
-                                    "value": None,
-                                    "fields": "content_vector",
-                                    "k": 3
-                                }],
-                                select=["content"])
+        # Step 1: Embed the query using Azure OpenAI embedding model
+        client_embed = AzureOpenAI(
+            api_key=os.getenv("AZURE_OPENAI_KEY"),
+            api_version=os.getenv("AZURE_OPENAI_EMBEDDING_VERSION"),
+            azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT")
+        )
+
+        embedding_response = client_embed.embeddings.create(
+            input=user_query,
+            model=os.getenv("AZURE_OPENAI_EMBEDDING_DEPLOYMENT")
+        )
+        query_vector = embedding_response.data[0].embedding
+
+        # Step 2: Perform vector search using Azure AI Search
+        client_search = get_azure_ai_search()
+
+        # Create a VectorizedQuery for vector search
+        vector_query = VectorizedQuery(
+            vector=query_vector,
+            k_nearest_neighbors=3,
+            fields="content_vector"
+        )
+
+
+
+        results = client_search.search(
+            search_text="",  # empty because we're doing pure vector search
+            vector_queries=[vector_query],
+
+            
+            # vectors=[{
+            #     "value": query_vector,
+            #     "fields": "content_vector",
+            #     "k": 3,
+            #     "kind": "vector"
+            # }],
+            select=["content"]
+        )
 
         top_chunks = "\n\n".join([doc["content"] for doc in results])
-        llm = AzureChatOpenAI(
-    api_key=os.getenv("AZURE_OPENAI_KEY"),
-    azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
-    deployment_name=os.getenv("AZURE_OPENAI_DEPLOYMENT"),  
-    api_version=os.getenv("AZURE_OPENAI_API_VERSION"),      
-)
 
-        prompt = f"You are a document assistant, provide to the point answer to the user with simple,clear words for better understanding
-        Answer based on the following context:\n\n {top_chunks} \n\nQuestion: {user_query}"
-        answer = llm.invoke(prompt)
-        return answer.content
+        # Step 3: Call GPT with retrieved context
+        client_chat = AzureOpenAI(
+            api_key=os.getenv("AZURE_OPENAI_KEY"),
+            api_version=os.getenv("AZURE_OPENAI_API_VERSION"),
+            azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT")
+        )
+
+        response = client_chat.chat.completions.create(
+            model=os.getenv("AZURE_OPENAI_DEPLOYMENT"),
+            messages=[
+                {"role": "system", "content": "You are a helpful document assistant. Answer the user's question based on the provided context."},
+                {"role": "user", "content": f"Answer based on the following context:\n\n{top_chunks}\n\nQuestion: {user_query}"}
+            ]
+        )
+
+        return response.choices[0].message.content
+
     except Exception as e:
         logger.error(f"Search failed: {e}")
         return "Search error occurred. Try again."

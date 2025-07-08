@@ -1,0 +1,41 @@
+Define the fields:
+
+Add three fields:
+
+id:
+
+Type: Edm.String
+
+Key: ✅
+
+Filterable: ✅
+
+content:
+
+Type: Edm.String
+
+Searchable: ✅
+
+content_vector:
+
+Type: Collection(Edm.Single)
+
+Dimensions: 1536
+
+Vector Search Configuration: vector-config
+
+Scroll down to Vector Search Settings:
+
+Click + Add vector search configuration
+
+Name: vector-config
+
+Kind: hnsw
+
+Set parameters:
+
+m: 4
+
+efConstruction: 400
+
+Click Create
