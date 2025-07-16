@@ -1,6 +1,4 @@
-Define the fields:
-
-Add three fields:
+ three fields:
 
 id:
 

@@ -8,7 +8,7 @@ logger = setup_logger()
 
 def search_query(user_query):
     try:
-        # Step 1: Embed the query using Azure OpenAI embedding model
+        #  Embed the query using Azure OpenAI embedding model
         client_embed = AzureOpenAI(
             api_key=os.getenv("AZURE_OPENAI_KEY"),
             api_version=os.getenv("AZURE_OPENAI_EMBEDDING_VERSION"),
@@ -21,7 +21,7 @@ def search_query(user_query):
         )
         query_vector = embedding_response.data[0].embedding
 
-        # Step 2: Perform vector search using Azure AI Search
+        
         client_search = get_azure_ai_search()
 
         # Create a VectorizedQuery for vector search
@@ -34,19 +34,14 @@ def search_query(user_query):
 
 
         results = client_search.search(
-            search_text="",  # empty because we're doing pure vector search
+            search_text="",  # empty because we re doing pure vector search
             vector_queries=[vector_query],
 
             
-            # vectors=[{
-            #     "value": query_vector,
-            #     "fields": "content_vector",
-            #     "k": 3,
-            #     "kind": "vector"
-            # }],
+            
             select=["content"]
         )
-
+        logger.info("Similarity search done successfully.")
         top_chunks = "\n\n".join([doc["content"] for doc in results])
 
         # Step 3: Call GPT with retrieved context

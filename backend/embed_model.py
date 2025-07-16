@@ -21,3 +21,10 @@ class AzureEmbedder:
         except Exception as e:
             logger.error(f"Embedding failed: {e}")
             return []
+        
+    def embed_batch(self, texts: list[str]):
+        response = self.client.embeddings.create(
+            input=texts,
+            model=self.model
+        )
+        return [item.embedding for item in response.data]    
